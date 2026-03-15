@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NoteJet Options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="card">
+        <h1>Import Source Whitelist</h1>
+        <p class="hint">Use one host per line. Supports <code>*</code> and <code>*.example.com</code>.</p>
+        <p class="hint">Default is <code>*</code> (allow all http/https hosts).</p>
+
+        <label class="field" for="whitelistEntryInput">Whitelist</label>
+        <div id="whitelistTags" class="tags" aria-live="polite"></div>
+        <input
+          id="whitelistEntryInput"
+          class="tag-input"
+          type="text"
+          placeholder="Type host and press Enter (e.g. *.example.com)"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <p class="hint">Press Enter or comma to add. Click tag x to remove.</p>
+        <p id="entryHelp" class="entry-help" aria-live="polite"></p>
+
+        <div class="actions">
+          <button id="saveButton" type="button">Save</button>
+          <button id="resetButton" type="button" class="ghost">Reset to default</button>
+        </div>
+
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

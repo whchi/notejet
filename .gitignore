@@ -1,0 +1,7 @@
+node_modules
+dist
+.worktrees
+node-compile-cache
+.opencode
+docs
+tests

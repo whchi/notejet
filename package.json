@@ -1,0 +1,17 @@
+{
+  "name": "notejet-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build:ts": "tsc -p tsconfig.json",
+    "build:assets": "node scripts/build-assets.mjs",
+    "build": "npm run clean && npm run build:ts && npm run build:assets",
+    "test": "npm run build --silent && node --test",
+    "format:fix": "bunx --bun @biomejs/biome format --write"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

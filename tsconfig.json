@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "rootDir": ".",
+    "outDir": "dist",
+    "allowJs": false,
+    "checkJs": false,
+    "declaration": false,
+    "sourceMap": false,
+    "strict": false,
+    "noEmitOnError": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

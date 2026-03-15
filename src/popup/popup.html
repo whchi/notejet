@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NoteJet</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <div class="card-wrapper">
+        <div class="card-shadow"></div>
+        <section class="card panel">
+          <header class="header">
+            <div>
+              <p class="badge eyebrow">NoteJet</p>
+              <h1>Capture to NotebookLM</h1>
+              <p class="hint">Save current page into the right notebook in seconds.</p>
+            </div>
+            <button
+              id="refreshSessionButton"
+              class="btn-icon secondary"
+              title="Refresh NotebookLM session"
+              aria-label="Refresh session"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 16H3v5" />
+              </svg>
+            </button>
+          </header>
+
+          <section class="captured">
+            <label class="field">
+              <span>Captured page</span>
+              <input id="sourceTitle" type="text" />
+            </label>
+            <label class="field">
+              <span>Source URL</span>
+              <input id="sourceUrl" type="url" readonly />
+            </label>
+            <p id="sourceValidation" class="source-validation" aria-live="polite"></p>
+            <button id="openImportPolicyOptions" class="policy-link" type="button">Edit import whitelist</button>
+          </section>
+
+          <section class="selection">
+            <label class="field search-field">
+              <span>Search notebooks</span>
+              <div class="search-wrapper">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input id="searchInput" type="search" placeholder="Type notebook name" />
+              </div>
+            </label>
+
+            <div class="list-wrap">
+              <p class="list-title">Recent / matched notebooks</p>
+              <ul id="notebookList" class="notebook-list"></ul>
+            </div>
+
+            <div class="create-row">
+              <input id="newNotebookInput" type="text" placeholder="New notebook name" />
+              <button id="createButton" class="ghost">Create</button>
+            </div>
+          </section>
+
+          <div class="import-wrapper button-row">
+            <button id="importButton" class="primary" disabled>
+              <span>Import</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg>
+            </button>
+          </div>
+
+          <footer class="footer-row">
+            <a id="openNotebookLink" class="open-link hidden" href="#" target="_blank" rel="noreferrer">
+              Open notebook
+            </a>
+            <p id="status" class="status" role="status" aria-live="polite"></p>
+          </footer>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
