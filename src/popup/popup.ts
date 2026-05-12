@@ -1,5 +1,6 @@
 import { buildSessionGate, getSessionActionLabel } from '../shared/popup-session-gate.js';
 import { readCachedSession, writeCachedSession } from '../shared/session-cache.js';
+import { filterYouTubeVideosByQuery } from '../shared/youtube-channel.js';
 
 const NOTEBOOK_HOME_URL = 'https://notebooklm.google.com/';
 
@@ -9,6 +10,10 @@ const state = {
   selectedNotebook: null,
   busy: false,
   sourceValidationValid: false,
+  youtubeChannel: null,
+  hasYoutubeDataApiKey: false,
+  youtubeVideos: [],
+  selectedVideoIds: new Set<string>(),
   sessionState: readCachedSession(window.localStorage) || { valid: false },
   sessionGate: buildSessionGate(readCachedSession(window.localStorage) || { valid: false }),
 };
@@ -24,13 +29,29 @@ const refreshSessionButtonEl = document.getElementById('refreshSessionButton') a
 const openNotebookLinkEl = document.getElementById('openNotebookLink') as HTMLAnchorElement;
 const sourceValidationEl = document.getElementById('sourceValidation') as HTMLElement;
 const openImportPolicyOptionsEl = document.getElementById('openImportPolicyOptions') as HTMLButtonElement;
+const loadYouTubeChannelButtonEl = document.getElementById('loadYouTubeChannelButton') as HTMLButtonElement;
+const youtubeChannelHelpEl = document.getElementById('youtubeChannelHelp') as HTMLElement;
+const youtubeVideoSectionEl = document.getElementById('youtubeVideoSection') as HTMLElement;
+const youtubeChannelTitleEl = document.getElementById('youtubeChannelTitle') as HTMLElement;
+const videoSearchInputEl = document.getElementById('videoSearchInput') as HTMLInputElement;
+const youtubeVideoListEl = document.getElementById('youtubeVideoList') as HTMLUListElement;
+const toggleAllVideosButtonEl = document.getElementById('toggleAllVideosButton') as HTMLButtonElement;
+const importSelectedVideosButtonEl = document.getElementById('importSelectedVideosButton') as HTMLButtonElement;
 const statusEl = document.getElementById('status') as HTMLElement;
 
 void bootstrap();
 
 searchInputEl.addEventListener('input', debounce(onSearchInput, 250));
+videoSearchInputEl.addEventListener('input', () => {
+  renderYouTubeVideoList();
+});
 createButtonEl.addEventListener('click', () => void handleCreateNotebook());
 importButtonEl.addEventListener('click', () => void handleImport());
+loadYouTubeChannelButtonEl.addEventListener('click', () => void handleLoadYouTubeChannel());
+toggleAllVideosButtonEl.addEventListener('click', () => {
+  handleToggleAllVideos();
+});
+importSelectedVideosButtonEl.addEventListener('click', () => void handleImportSelectedVideos());
 sourceTitleEl.addEventListener('input', () => {
   if (state.source) {
     state.source.title = sourceTitleEl.value;
@@ -62,6 +83,9 @@ async function bootstrap() {
     sourceTitleEl.value = state.source.title;
     sourceUrlEl.value = state.source.url;
     applySourceValidation(bootstrapResult.sourceValidation);
+    state.youtubeChannel = bootstrapResult.youtubeChannel || null;
+    state.hasYoutubeDataApiKey = Boolean(bootstrapResult.hasYoutubeDataApiKey);
+    applyYouTubeChannelState();
 
     applySessionState(bootstrapResult.sessionState);
 
@@ -201,6 +225,86 @@ async function handleImport() {
   }
 }
 
+async function handleLoadYouTubeChannel() {
+  if (!state.youtubeChannel) {
+    setStatus('Open a YouTube channel profile before importing channel videos.', 'error');
+    return;
+  }
+
+  if (!state.hasYoutubeDataApiKey) {
+    setYouTubeHelp('Add a YouTube Data API key in options first.', 'error');
+    setStatus('YouTube Data API key is required before channel import.', 'error');
+    return;
+  }
+
+  setBusy(true);
+  setYouTubeHelp('Loading channel videos...');
+
+  try {
+    const result = await sendMessage({
+      type: 'GET_YOUTUBE_CHANNEL_VIDEOS',
+      sourceUrl: state.source.url,
+    });
+    state.youtubeChannel = result.channel;
+    state.youtubeVideos = result.videos || [];
+    state.selectedVideoIds.clear();
+    youtubeVideoSectionEl.classList.remove('hidden');
+    importSelectedVideosButtonEl.classList.remove('hidden');
+    youtubeChannelTitleEl.textContent = state.youtubeChannel.title || state.youtubeChannel.value;
+    renderYouTubeVideoList();
+    setYouTubeHelp(`${state.youtubeVideos.length} videos loaded.`);
+    setStatus(`Found ${state.youtubeVideos.length} YouTube videos.`);
+  } catch (error) {
+    setYouTubeHelp(String(error), 'error');
+    setStatus(String(error), 'error');
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function handleImportSelectedVideos() {
+  if (!state.sessionGate.canImport) {
+    setStatus(state.sessionGate.statusMessage, 'error');
+    updateOpenLink();
+    return;
+  }
+
+  if (!state.selectedNotebook) {
+    setStatus('Select a notebook first.', 'error');
+    return;
+  }
+
+  const videos = state.youtubeVideos.filter(video => state.selectedVideoIds.has(video.id));
+  if (!videos.length) {
+    setStatus('Select at least one YouTube video first.', 'error');
+    return;
+  }
+
+  setBusy(true);
+  setStatus(`Importing ${videos.length} selected videos...`);
+
+  try {
+    const result = await sendMessage({
+      type: 'IMPORT_YOUTUBE_VIDEOS_TO_NOTEBOOK',
+      notebook: state.selectedNotebook,
+      videos,
+    });
+    applySessionState({ valid: true, lastCheckedAt: Date.now(), reason: '' });
+    updateOpenLink();
+
+    if (result.failedCount) {
+      setStatus(`Imported ${result.importedCount}; ${result.failedCount} failed.`, 'error');
+      return;
+    }
+
+    setStatus(`Imported ${result.importedCount} videos.`, 'success');
+  } catch (error) {
+    handleOperationError(error);
+  } finally {
+    setBusy(false);
+  }
+}
+
 async function handleRefreshSession() {
   setBusy(true);
   setStatus('Refreshing session...');
@@ -256,6 +360,7 @@ function renderNotebookList() {
       state.selectedNotebook = notebook;
       renderNotebookList();
       updateOpenLink();
+      updateVideoImportButton();
       if (fromKeyboard) {
         const selectedItem = notebookListEl.querySelector('.notebook-item.selected') as HTMLElement | null;
         selectedItem?.focus();
@@ -281,6 +386,7 @@ function renderNotebookList() {
   }
 
   importButtonEl.disabled = !state.selectedNotebook || state.busy || !state.sourceValidationValid;
+  updateVideoImportButton();
 }
 
 function updateOpenLink() {
@@ -309,11 +415,143 @@ function setBusy(busy) {
   searchInputEl.disabled = busy || !state.sessionGate.canSearch;
   newNotebookInputEl.disabled = busy || !state.sessionGate.canCreate;
   importButtonEl.disabled = busy || !state.selectedNotebook || !state.sessionGate.canImport;
+  loadYouTubeChannelButtonEl.disabled = busy || !state.youtubeChannel || !state.hasYoutubeDataApiKey;
+  videoSearchInputEl.disabled = busy;
+  toggleAllVideosButtonEl.disabled = busy || !getVisibleYouTubeVideos().length;
+  importSelectedVideosButtonEl.disabled =
+    busy || !state.selectedNotebook || !state.sessionGate.canImport || !state.selectedVideoIds.size;
   if (!state.sourceValidationValid) {
     importButtonEl.disabled = true;
   }
   refreshSessionButtonEl.disabled = busy;
   openImportPolicyOptionsEl.disabled = busy;
+}
+
+function applyYouTubeChannelState() {
+  if (!state.youtubeChannel) {
+    loadYouTubeChannelButtonEl.classList.add('hidden');
+    youtubeChannelHelpEl.classList.add('hidden');
+    youtubeVideoSectionEl.classList.add('hidden');
+    importSelectedVideosButtonEl.classList.add('hidden');
+    return;
+  }
+
+  loadYouTubeChannelButtonEl.classList.remove('hidden');
+  youtubeChannelHelpEl.classList.remove('hidden');
+  if (!state.hasYoutubeDataApiKey) {
+    loadYouTubeChannelButtonEl.disabled = true;
+    setYouTubeHelp('Add a YouTube Data API key in options before loading videos.', 'error');
+    return;
+  }
+
+  loadYouTubeChannelButtonEl.disabled = state.busy;
+  setYouTubeHelp(`Ready to load videos from ${state.youtubeChannel.value}.`);
+}
+
+function renderYouTubeVideoList() {
+  youtubeVideoListEl.innerHTML = '';
+  const videos = getVisibleYouTubeVideos();
+
+  if (!videos.length) {
+    const empty = document.createElement('li');
+    empty.className = 'video-item';
+    empty.textContent = state.youtubeVideos.length ? 'No videos match this search.' : 'No videos found.';
+    youtubeVideoListEl.appendChild(empty);
+    updateVideoImportButton();
+    return;
+  }
+
+  for (const video of videos) {
+    const item = document.createElement('li');
+    item.className = 'video-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = state.selectedVideoIds.has(video.id);
+    checkbox.setAttribute('aria-label', `Select ${video.title}`);
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        state.selectedVideoIds.add(video.id);
+      } else {
+        state.selectedVideoIds.delete(video.id);
+      }
+      updateVideoImportButton();
+      updateToggleAllVideosButton(videos);
+    });
+
+    const content = document.createElement('div');
+
+    const title = document.createElement('p');
+    title.className = 'video-title';
+    title.textContent = video.title || video.url;
+
+    const meta = document.createElement('p');
+    meta.className = 'video-meta';
+    meta.textContent = formatVideoMeta(video);
+
+    content.appendChild(title);
+    content.appendChild(meta);
+    item.appendChild(checkbox);
+    item.appendChild(content);
+    youtubeVideoListEl.appendChild(item);
+  }
+
+  updateVideoImportButton();
+  updateToggleAllVideosButton(videos);
+}
+
+function handleToggleAllVideos() {
+  const videos = getVisibleYouTubeVideos();
+  if (!videos.length) {
+    return;
+  }
+
+  const allSelected = videos.every(video => state.selectedVideoIds.has(video.id));
+  for (const video of videos) {
+    if (allSelected) {
+      state.selectedVideoIds.delete(video.id);
+    } else {
+      state.selectedVideoIds.add(video.id);
+    }
+  }
+
+  renderYouTubeVideoList();
+}
+
+function getVisibleYouTubeVideos() {
+  return filterYouTubeVideosByQuery(state.youtubeVideos, videoSearchInputEl.value);
+}
+
+function updateToggleAllVideosButton(videos = getVisibleYouTubeVideos()) {
+  const allSelected = videos.length && videos.every(video => state.selectedVideoIds.has(video.id));
+  toggleAllVideosButtonEl.textContent = allSelected ? 'Clear' : 'All';
+  toggleAllVideosButtonEl.disabled = state.busy || !videos.length;
+}
+
+function updateVideoImportButton() {
+  const count = state.selectedVideoIds.size;
+  importSelectedVideosButtonEl.disabled = state.busy || !state.selectedNotebook || !state.sessionGate.canImport || !count;
+  const label = count ? `Import ${count} selected videos` : 'Import selected videos';
+  importSelectedVideosButtonEl.querySelector('span').textContent = label;
+}
+
+function formatVideoMeta(video) {
+  const parts = [];
+  if (video.channelTitle) {
+    parts.push(video.channelTitle);
+  }
+  if (video.publishedAt) {
+    parts.push(video.publishedAt.slice(0, 10));
+  }
+  return parts.join(' · ') || video.url;
+}
+
+function setYouTubeHelp(message, type = '') {
+  youtubeChannelHelpEl.textContent = message;
+  youtubeChannelHelpEl.classList.remove('error');
+  if (type) {
+    youtubeChannelHelpEl.classList.add(type);
+  }
 }
 
 function applySourceValidation(validation) {

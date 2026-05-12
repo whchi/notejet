@@ -5,3 +5,4 @@ node-compile-cache
 .opencode
 docs
 tests
+.DS_Store

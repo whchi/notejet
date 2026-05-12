@@ -28,6 +28,7 @@ After code changes, run `bun run build` again and click **Reload** on the extens
 - Shows recent notebooks and lets you search existing notebooks.
 - Lets you create a new notebook.
 - Imports the current page URL into the selected notebook.
+- Lists videos from a YouTube channel profile and imports selected videos one by one.
 - Checks whether the current page is allowed by your import whitelist.
 
 ## Basic workflow
@@ -41,6 +42,28 @@ After code changes, run `bun run build` again and click **Reload** on the extens
 7. Click **Import**.
 
 If the import succeeds, the popup will show a success message.
+
+## Import YouTube channel videos
+
+YouTube channel import only appears when the current tab is a YouTube channel profile, such as:
+
+- `https://www.youtube.com/channel/UCX6OQ3DkcsbYNE6H8uQQuVA`
+- `https://www.youtube.com/@MrBeast`
+
+Before using it, open **Edit import whitelist** and add a YouTube Data API key. Google’s setup guide is linked from the options page:
+<https://developers.google.com/youtube/v3/getting-started>
+
+Workflow:
+
+1. Open a YouTube channel profile.
+2. Open the NoteJet popup.
+3. Select or create the NotebookLM notebook.
+4. Click **Import YouTube channel**.
+5. Search or scroll the video list.
+6. Check the videos to import.
+7. Click **Import selected videos**.
+
+NoteJet imports selected videos sequentially. If one video fails, the batch continues and the popup reports the imported and failed counts.
 
 ## Sign in to NotebookLM
 
@@ -95,6 +118,7 @@ This includes:
 
 - recent notebook entries
 - import whitelist settings
+- YouTube Data API key
 - NotebookLM session state
 
 ## Demo(youtube)

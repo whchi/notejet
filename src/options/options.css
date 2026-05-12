@@ -92,7 +92,8 @@ h1 {
   cursor: pointer;
 }
 
-.tag-input {
+.tag-input,
+.api-key-input {
   width: 100%;
   margin-top: 8px;
   border: 2px solid var(--line);
@@ -157,4 +158,10 @@ button.ghost {
 
 .status.success {
   color: var(--success);
+}
+
+a {
+  color: var(--ink);
+  font-weight: 700;
+  text-underline-offset: 2px;
 }

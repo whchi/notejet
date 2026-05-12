@@ -7,6 +7,7 @@ import {
 
 const whitelistTagsEl = document.getElementById('whitelistTags') as HTMLElement;
 const whitelistEntryInputEl = document.getElementById('whitelistEntryInput') as HTMLInputElement;
+const youtubeApiKeyInputEl = document.getElementById('youtubeApiKeyInput') as HTMLInputElement;
 const saveButtonEl = document.getElementById('saveButton') as HTMLButtonElement;
 const resetButtonEl = document.getElementById('resetButton') as HTMLButtonElement;
 const statusEl = document.getElementById('status') as HTMLElement;
@@ -15,6 +16,7 @@ const entryHelpEl = document.getElementById('entryHelp') as HTMLElement;
 const state = {
   whitelist: [],
   duplicateEntry: '',
+  youtubeApiKey: '',
 };
 
 void bootstrap();
@@ -38,8 +40,13 @@ whitelistEntryInputEl.addEventListener('input', () => {
 async function bootstrap() {
   setStatus('Loading...');
   try {
-    const policy = await sendMessage({ type: 'GET_IMPORT_SOURCE_POLICY' });
+    const [policy, youtubeApiKey] = await Promise.all([
+      sendMessage({ type: 'GET_IMPORT_SOURCE_POLICY' }),
+      sendMessage({ type: 'GET_YOUTUBE_DATA_API_KEY' }),
+    ]);
     state.whitelist = [...normalizeImportSourcePolicy(policy).whitelist];
+    state.youtubeApiKey = youtubeApiKey;
+    youtubeApiKeyInputEl.value = state.youtubeApiKey;
     renderWhitelistTags();
     setStatus('Ready.', 'success');
   } catch (error) {
@@ -56,11 +63,19 @@ async function handleSave() {
 
   setBusy(true);
   try {
-    const saved = await sendMessage({
-      type: 'SET_IMPORT_SOURCE_POLICY',
-      policy: { whitelist: state.whitelist },
-    });
+    const [saved, youtubeApiKey] = await Promise.all([
+      sendMessage({
+        type: 'SET_IMPORT_SOURCE_POLICY',
+        policy: { whitelist: state.whitelist },
+      }),
+      sendMessage({
+        type: 'SET_YOUTUBE_DATA_API_KEY',
+        apiKey: youtubeApiKeyInputEl.value,
+      }),
+    ]);
     state.whitelist = [...normalizeImportSourcePolicy(saved).whitelist];
+    state.youtubeApiKey = youtubeApiKey;
+    youtubeApiKeyInputEl.value = state.youtubeApiKey;
     renderWhitelistTags();
     setStatus('Saved.', 'success');
   } catch (error) {
@@ -91,6 +106,7 @@ function setBusy(busy) {
   saveButtonEl.disabled = busy;
   resetButtonEl.disabled = busy;
   whitelistEntryInputEl.disabled = busy;
+  youtubeApiKeyInputEl.disabled = busy;
 }
 
 function addEntriesFromInput() {

@@ -155,6 +155,38 @@ h1 {
   font-weight: 600;
 }
 
+.channel-button {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 40px;
+  border: 2px solid var(--line);
+  background: #111827;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.channel-button:hover:not(:disabled) {
+  background: #27272a;
+}
+
+.channel-button:disabled {
+  border-color: var(--line-soft);
+  background: #f5f5f4;
+  color: #a8a29e;
+  cursor: not-allowed;
+}
+
+.youtube-help {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.youtube-help.error {
+  color: var(--error);
+}
+
 .selection {
   padding: 20px;
 }
@@ -317,6 +349,80 @@ input[readonly] {
   border-style: solid;
 }
 
+.youtube-section {
+  padding: 0 20px 18px;
+  border-top: 2px solid var(--line);
+}
+
+.youtube-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 16px;
+}
+
+.youtube-channel-title {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.tiny-button {
+  min-width: 44px;
+  min-height: 32px;
+  border: 2px solid var(--line-soft);
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.video-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 210px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.video-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 2px solid #e7e5e4;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.video-item input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.video-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.video-meta {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+
 button {
   border-radius: 12px;
   cursor: pointer;
@@ -365,6 +471,9 @@ button {
 
 .button-row {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .primary {
@@ -411,6 +520,16 @@ button {
   box-shadow: 6px 6px 0 var(--line-soft);
 }
 
+.secondary-action {
+  background: #ffffff;
+  box-shadow: 6px 6px 0 var(--line);
+}
+
+.secondary-action.hidden,
+.hidden {
+  display: none;
+}
+
 .footer-row {
   padding: 0 20px 20px;
 }
@@ -422,10 +541,6 @@ button {
   color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-.open-link.hidden {
-  display: none;
 }
 
 .status {

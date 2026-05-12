@@ -43,6 +43,10 @@
             </label>
             <p id="sourceValidation" class="source-validation" aria-live="polite"></p>
             <button id="openImportPolicyOptions" class="policy-link" type="button">Edit import whitelist</button>
+            <button id="loadYouTubeChannelButton" class="channel-button hidden" type="button">
+              Import YouTube channel
+            </button>
+            <p id="youtubeChannelHelp" class="youtube-help hidden" aria-live="polite"></p>
           </section>
 
           <section class="selection">
@@ -68,12 +72,42 @@
             </div>
           </section>
 
+          <section id="youtubeVideoSection" class="youtube-section hidden">
+            <div class="youtube-section-header">
+              <div>
+                <p class="list-title">YouTube videos</p>
+                <p id="youtubeChannelTitle" class="youtube-channel-title"></p>
+              </div>
+              <button id="toggleAllVideosButton" class="tiny-button" type="button">All</button>
+            </div>
+
+            <label class="field search-field">
+              <span>Search videos</span>
+              <div class="search-wrapper">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input id="videoSearchInput" type="search" placeholder="Type video title" />
+              </div>
+            </label>
+
+            <ul id="youtubeVideoList" class="video-list"></ul>
+          </section>
+
           <div class="import-wrapper button-row">
             <button id="importButton" class="primary" disabled>
               <span>Import</span>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 7h10v10" />
                 <path d="M7 17 17 7" />
+              </svg>
+            </button>
+            <button id="importSelectedVideosButton" class="primary secondary-action hidden" disabled>
+              <span>Import selected videos</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
               </svg>
             </button>
           </div>

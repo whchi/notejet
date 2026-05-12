@@ -26,6 +26,22 @@
         <p class="hint">Press Enter or comma to add. Click tag x to remove.</p>
         <p id="entryHelp" class="entry-help" aria-live="polite"></p>
 
+        <label class="field" for="youtubeApiKeyInput">YouTube Data API key</label>
+        <input
+          id="youtubeApiKeyInput"
+          class="api-key-input"
+          type="password"
+          placeholder="Required for YouTube channel import"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <p class="hint">
+          Needed to list channel videos.
+          <a href="https://developers.google.com/youtube/v3/getting-started" target="_blank" rel="noreferrer">
+            Get a YouTube Data API key
+          </a>
+        </p>
+
         <div class="actions">
           <button id="saveButton" type="button">Save</button>
           <button id="resetButton" type="button" class="ghost">Reset to default</button>

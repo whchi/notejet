@@ -18,15 +18,18 @@ import {
   validateImportSourceUrl,
 } from '../shared/source-url-policy.js';
 import { callNotebookRpc } from '../shared/notebook-api-client.js';
+import { extractYouTubeChannelIdentifier, mapYouTubePlaylistItems } from '../shared/youtube-channel.js';
 
 const STORAGE_KEYS = {
   recentNotebooks: 'recentNotebooks',
   notebookSession: 'notebookSession',
   authSnapshot: 'authSnapshot',
   importSourcePolicy: 'importSourcePolicy',
+  youtubeDataApiKey: 'youtubeDataApiKey',
 };
 
 const NOTEBOOK_BASE_URL = 'https://notebooklm.google.com/';
+const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3/';
 
 chrome.runtime.onInstalled.addListener(() => {
   void initializeStorage();
@@ -59,12 +62,20 @@ async function handleMessage(message, _sender) {
       return createNotebook(message.name || '');
     case 'IMPORT_TO_NOTEBOOK':
       return importToNotebook(message.notebook, message.source);
+    case 'GET_YOUTUBE_CHANNEL_VIDEOS':
+      return getYouTubeChannelVideos(message.sourceUrl || '');
+    case 'IMPORT_YOUTUBE_VIDEOS_TO_NOTEBOOK':
+      return importYouTubeVideosToNotebook(message.notebook, message.videos || []);
     case 'OPEN_NOTEBOOK':
       return openNotebook(message.notebook);
     case 'GET_IMPORT_SOURCE_POLICY':
       return getImportSourcePolicy();
     case 'SET_IMPORT_SOURCE_POLICY':
       return setImportSourcePolicy(message.policy);
+    case 'GET_YOUTUBE_DATA_API_KEY':
+      return getYouTubeDataApiKey();
+    case 'SET_YOUTUBE_DATA_API_KEY':
+      return setYouTubeDataApiKey(message.apiKey || '');
     default:
       throw new Error('Unknown message type.');
   }
@@ -76,7 +87,9 @@ async function getBootstrap() {
   const sessionState = await checkNotebookSession(false);
   const importSourcePolicy = await getImportSourcePolicy();
   const sourceValidation = validateImportSourceUrl(source.url, importSourcePolicy);
-  return { source, recentNotebooks, sessionState, sourceValidation };
+  const youtubeChannel = extractYouTubeChannelIdentifier(source.url);
+  const hasYoutubeDataApiKey = Boolean(await getYouTubeDataApiKey());
+  return { source, recentNotebooks, sessionState, sourceValidation, youtubeChannel, hasYoutubeDataApiKey };
 }
 
 async function listNotebooks(query) {
@@ -188,6 +201,113 @@ async function importToNotebook(notebook, source) {
   };
 }
 
+async function getYouTubeChannelVideos(sourceUrl) {
+  const channel = extractYouTubeChannelIdentifier(sourceUrl);
+  if (!channel) {
+    throw new Error('Open a YouTube channel profile before importing channel videos.');
+  }
+
+  const apiKey = await getYouTubeDataApiKey();
+  if (!apiKey) {
+    throw new Error('YouTube Data API key is required before importing channel videos.');
+  }
+
+  const channelInfo = await fetchYouTubeChannelInfo(apiKey, channel);
+  const videos = await fetchYouTubePlaylistVideos(apiKey, channelInfo.uploadsPlaylistId);
+
+  return {
+    channel: {
+      ...channel,
+      title: channelInfo.title,
+    },
+    videos,
+  };
+}
+
+async function importYouTubeVideosToNotebook(notebook, videos) {
+  if (!Array.isArray(videos) || !videos.length) {
+    throw new Error('Select at least one YouTube video to import.');
+  }
+
+  const results = [];
+  for (const video of videos) {
+    try {
+      await importToNotebook(notebook, {
+        title: video.title || video.url,
+        url: video.url,
+      });
+      results.push({ video, imported: true });
+    } catch (error) {
+      results.push({ video, imported: false, error: normalizeError(error) });
+    }
+  }
+
+  return {
+    importedCount: results.filter(item => item.imported).length,
+    failedCount: results.filter(item => !item.imported).length,
+    results,
+  };
+}
+
+async function fetchYouTubeChannelInfo(apiKey, channel) {
+  const params = new URLSearchParams({
+    part: 'snippet,contentDetails',
+    key: apiKey,
+  });
+
+  if (channel.type === 'channelId') {
+    params.set('id', channel.value);
+  } else {
+    params.set('forHandle', channel.value);
+  }
+
+  const data = await fetchYouTubeApi(`channels?${params.toString()}`);
+  const item = Array.isArray(data.items) ? data.items[0] : null;
+  const uploadsPlaylistId = item?.contentDetails?.relatedPlaylists?.uploads;
+  if (!item || !uploadsPlaylistId) {
+    throw new Error('Could not resolve this YouTube channel from the current page.');
+  }
+
+  return {
+    title: item?.snippet?.title || channel.value,
+    uploadsPlaylistId,
+  };
+}
+
+async function fetchYouTubePlaylistVideos(apiKey, playlistId) {
+  const videos = [];
+  let pageToken = '';
+
+  do {
+    const params = new URLSearchParams({
+      part: 'snippet,contentDetails',
+      playlistId,
+      maxResults: '50',
+      key: apiKey,
+    });
+
+    if (pageToken) {
+      params.set('pageToken', pageToken);
+    }
+
+    const data = await fetchYouTubeApi(`playlistItems?${params.toString()}`);
+    videos.push(...mapYouTubePlaylistItems(data.items));
+    pageToken = data.nextPageToken || '';
+  } while (pageToken);
+
+  return videos;
+}
+
+async function fetchYouTubeApi(path) {
+  const response = await fetch(`${YOUTUBE_API_BASE_URL}${path}`);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = data?.error?.message || response.statusText || 'YouTube Data API request failed.';
+    throw new Error(`YouTube Data API error: ${detail}`);
+  }
+  return data;
+}
+
 async function openNotebook(notebook) {
   if (!notebook?.url) {
     throw new Error('Notebook URL is missing.');
@@ -228,6 +348,17 @@ async function setImportSourcePolicy(policyInput) {
   const policy = normalizeImportSourcePolicy(policyInput);
   await chrome.storage.local.set({ [STORAGE_KEYS.importSourcePolicy]: policy });
   return policy;
+}
+
+async function getYouTubeDataApiKey() {
+  const data = await chrome.storage.local.get([STORAGE_KEYS.youtubeDataApiKey]);
+  return String(data[STORAGE_KEYS.youtubeDataApiKey] || '').trim();
+}
+
+async function setYouTubeDataApiKey(apiKeyInput) {
+  const apiKey = String(apiKeyInput || '').trim();
+  await chrome.storage.local.set({ [STORAGE_KEYS.youtubeDataApiKey]: apiKey });
+  return apiKey;
 }
 
 async function getRecentNotebooks() {
