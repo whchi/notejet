@@ -26,7 +26,7 @@ const newNotebookInputEl = document.getElementById('newNotebookInput') as HTMLIn
 const createButtonEl = document.getElementById('createButton') as HTMLButtonElement;
 const importButtonEl = document.getElementById('importButton') as HTMLButtonElement;
 const refreshSessionButtonEl = document.getElementById('refreshSessionButton') as HTMLButtonElement;
-const openNotebookLinkEl = document.getElementById('openNotebookLink') as HTMLAnchorElement;
+const openNotebookLinkEl = document.getElementById('openNotebookLink') as HTMLButtonElement;
 const sourceValidationEl = document.getElementById('sourceValidation') as HTMLElement;
 const openImportPolicyOptionsEl = document.getElementById('openImportPolicyOptions') as HTMLButtonElement;
 const loadYouTubeChannelButtonEl = document.getElementById('loadYouTubeChannelButton') as HTMLButtonElement;
@@ -39,39 +39,28 @@ const toggleAllVideosButtonEl = document.getElementById('toggleAllVideosButton')
 const importSelectedVideosButtonEl = document.getElementById('importSelectedVideosButton') as HTMLButtonElement;
 const statusEl = document.getElementById('status') as HTMLElement;
 
+openNotebookLinkEl.addEventListener('click', () => void handleOpenNotebook());
+
 void bootstrap();
 
 searchInputEl.addEventListener('input', debounce(onSearchInput, 250));
-videoSearchInputEl.addEventListener('input', () => {
+videoSearchInputEl?.addEventListener('input', () => {
   renderYouTubeVideoList();
 });
 createButtonEl.addEventListener('click', () => void handleCreateNotebook());
 importButtonEl.addEventListener('click', () => void handleImport());
-loadYouTubeChannelButtonEl.addEventListener('click', () => void handleLoadYouTubeChannel());
-toggleAllVideosButtonEl.addEventListener('click', () => {
+loadYouTubeChannelButtonEl?.addEventListener('click', () => void handleLoadYouTubeChannel());
+toggleAllVideosButtonEl?.addEventListener('click', () => {
   handleToggleAllVideos();
 });
-importSelectedVideosButtonEl.addEventListener('click', () => void handleImportSelectedVideos());
+importSelectedVideosButtonEl?.addEventListener('click', () => void handleImportSelectedVideos());
 sourceTitleEl.addEventListener('input', () => {
   if (state.source) {
     state.source.title = sourceTitleEl.value;
   }
 });
 refreshSessionButtonEl.addEventListener('click', () => void handleRefreshSession());
-openImportPolicyOptionsEl.addEventListener('click', () => {
-  void chrome.runtime.openOptionsPage();
-});
-openNotebookLinkEl.addEventListener('click', event => {
-  event.preventDefault();
-  if (!state.sessionState?.valid) {
-    void sendMessage({ type: 'OPEN_NOTEBOOK', notebook: { url: NOTEBOOK_HOME_URL } });
-    return;
-  }
-  if (!state.selectedNotebook?.url) {
-    return;
-  }
-  void sendMessage({ type: 'OPEN_NOTEBOOK', notebook: state.selectedNotebook });
-});
+openImportPolicyOptionsEl.addEventListener('click', () => void handleOpenImportPolicyOptions());
 
 async function bootstrap() {
   setStatus('Loading context...');
@@ -248,9 +237,11 @@ async function handleLoadYouTubeChannel() {
     state.youtubeChannel = result.channel;
     state.youtubeVideos = result.videos || [];
     state.selectedVideoIds.clear();
-    youtubeVideoSectionEl.classList.remove('hidden');
-    importSelectedVideosButtonEl.classList.remove('hidden');
-    youtubeChannelTitleEl.textContent = state.youtubeChannel.title || state.youtubeChannel.value;
+    youtubeVideoSectionEl?.classList.remove('hidden');
+    importSelectedVideosButtonEl?.classList.remove('hidden');
+    if (youtubeChannelTitleEl) {
+      youtubeChannelTitleEl.textContent = state.youtubeChannel.title || state.youtubeChannel.value;
+    }
     renderYouTubeVideoList();
     setYouTubeHelp(`${state.youtubeVideos.length} videos loaded.`);
     setStatus(`Found ${state.youtubeVideos.length} YouTube videos.`);
@@ -326,6 +317,33 @@ async function handleRefreshSession() {
   }
 }
 
+async function handleOpenNotebook() {
+  const notebook = state.sessionState?.valid ? state.selectedNotebook : { url: NOTEBOOK_HOME_URL };
+  if (!notebook?.url) {
+    return;
+  }
+
+  try {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      await chrome.tabs.create({ url: notebook.url });
+      return;
+    }
+
+    await sendMessage({ type: 'OPEN_NOTEBOOK', notebook });
+  } catch (error) {
+    setStatus(String(error), 'error');
+  }
+}
+
+async function handleOpenImportPolicyOptions() {
+  try {
+    await chrome.runtime.openOptionsPage();
+  } catch (error) {
+    console.warn('openOptionsPage failed, falling back to tabs.create', error);
+    await chrome.tabs.create({ url: chrome.runtime.getURL('src/options/options.html') });
+  }
+}
+
 function renderNotebookList() {
   notebookListEl.innerHTML = '';
 
@@ -392,20 +410,17 @@ function renderNotebookList() {
 function updateOpenLink() {
   if (!state.sessionState?.valid) {
     openNotebookLinkEl.classList.remove('hidden');
-    openNotebookLinkEl.href = NOTEBOOK_HOME_URL;
     openNotebookLinkEl.textContent = getSessionActionLabel(state.sessionState);
     return;
   }
 
   if (!state.selectedNotebook?.url) {
     openNotebookLinkEl.classList.add('hidden');
-    openNotebookLinkEl.href = '#';
     openNotebookLinkEl.textContent = 'Open notebook';
     return;
   }
 
   openNotebookLinkEl.classList.remove('hidden');
-  openNotebookLinkEl.href = state.selectedNotebook.url;
   openNotebookLinkEl.textContent = getSessionActionLabel(state.sessionState);
 }
 
@@ -415,11 +430,19 @@ function setBusy(busy) {
   searchInputEl.disabled = busy || !state.sessionGate.canSearch;
   newNotebookInputEl.disabled = busy || !state.sessionGate.canCreate;
   importButtonEl.disabled = busy || !state.selectedNotebook || !state.sessionGate.canImport;
-  loadYouTubeChannelButtonEl.disabled = busy || !state.youtubeChannel || !state.hasYoutubeDataApiKey;
-  videoSearchInputEl.disabled = busy;
-  toggleAllVideosButtonEl.disabled = busy || !getVisibleYouTubeVideos().length;
-  importSelectedVideosButtonEl.disabled =
-    busy || !state.selectedNotebook || !state.sessionGate.canImport || !state.selectedVideoIds.size;
+  if (loadYouTubeChannelButtonEl) {
+    loadYouTubeChannelButtonEl.disabled = busy || !state.youtubeChannel || !state.hasYoutubeDataApiKey;
+  }
+  if (videoSearchInputEl) {
+    videoSearchInputEl.disabled = busy;
+  }
+  if (toggleAllVideosButtonEl) {
+    toggleAllVideosButtonEl.disabled = busy || !getVisibleYouTubeVideos().length;
+  }
+  if (importSelectedVideosButtonEl) {
+    importSelectedVideosButtonEl.disabled =
+      busy || !state.selectedNotebook || !state.sessionGate.canImport || !state.selectedVideoIds.size;
+  }
   if (!state.sourceValidationValid) {
     importButtonEl.disabled = true;
   }
@@ -428,6 +451,10 @@ function setBusy(busy) {
 }
 
 function applyYouTubeChannelState() {
+  if (!loadYouTubeChannelButtonEl || !youtubeChannelHelpEl || !youtubeVideoSectionEl || !importSelectedVideosButtonEl) {
+    return;
+  }
+
   if (!state.youtubeChannel) {
     loadYouTubeChannelButtonEl.classList.add('hidden');
     youtubeChannelHelpEl.classList.add('hidden');
@@ -449,6 +476,10 @@ function applyYouTubeChannelState() {
 }
 
 function renderYouTubeVideoList() {
+  if (!youtubeVideoListEl) {
+    return;
+  }
+
   youtubeVideoListEl.innerHTML = '';
   const videos = getVisibleYouTubeVideos();
 
@@ -519,20 +550,31 @@ function handleToggleAllVideos() {
 }
 
 function getVisibleYouTubeVideos() {
-  return filterYouTubeVideosByQuery(state.youtubeVideos, videoSearchInputEl.value);
+  return filterYouTubeVideosByQuery(state.youtubeVideos, videoSearchInputEl?.value || '');
 }
 
 function updateToggleAllVideosButton(videos = getVisibleYouTubeVideos()) {
+  if (!toggleAllVideosButtonEl) {
+    return;
+  }
+
   const allSelected = videos.length && videos.every(video => state.selectedVideoIds.has(video.id));
   toggleAllVideosButtonEl.textContent = allSelected ? 'Clear' : 'All';
   toggleAllVideosButtonEl.disabled = state.busy || !videos.length;
 }
 
 function updateVideoImportButton() {
+  if (!importSelectedVideosButtonEl) {
+    return;
+  }
+
   const count = state.selectedVideoIds.size;
   importSelectedVideosButtonEl.disabled = state.busy || !state.selectedNotebook || !state.sessionGate.canImport || !count;
   const label = count ? `Import ${count} selected videos` : 'Import selected videos';
-  importSelectedVideosButtonEl.querySelector('span').textContent = label;
+  const labelEl = importSelectedVideosButtonEl.querySelector('span');
+  if (labelEl) {
+    labelEl.textContent = label;
+  }
 }
 
 function formatVideoMeta(video) {
@@ -547,6 +589,10 @@ function formatVideoMeta(video) {
 }
 
 function setYouTubeHelp(message, type = '') {
+  if (!youtubeChannelHelpEl) {
+    return;
+  }
+
   youtubeChannelHelpEl.textContent = message;
   youtubeChannelHelpEl.classList.remove('error');
   if (type) {

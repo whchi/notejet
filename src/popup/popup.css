@@ -536,11 +536,15 @@ button {
 
 .open-link {
   display: inline-block;
+  border: 0;
+  background: transparent;
+  padding: 0;
   font-size: 12px;
   font-weight: 600;
   color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 .status {
