@@ -350,8 +350,9 @@ input[readonly] {
 }
 
 .youtube-section {
-  padding: 0 20px 18px;
-  border-top: 2px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 2px solid var(--line-soft);
 }
 
 .youtube-section-header {
@@ -359,7 +360,6 @@ input[readonly] {
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  padding-top: 16px;
 }
 
 .youtube-channel-title {

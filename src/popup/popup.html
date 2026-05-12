@@ -47,6 +47,29 @@
               List YouTube channel videos
             </button>
             <p id="youtubeChannelHelp" class="youtube-help hidden" aria-live="polite"></p>
+
+            <section id="youtubeVideoSection" class="youtube-section hidden">
+              <div class="youtube-section-header">
+                <div>
+                  <p class="list-title">YouTube videos</p>
+                  <p id="youtubeChannelTitle" class="youtube-channel-title"></p>
+                </div>
+                <button id="toggleAllVideosButton" class="tiny-button" type="button">All</button>
+              </div>
+
+              <label class="field search-field">
+                <span>Search videos</span>
+                <div class="search-wrapper">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                  <input id="videoSearchInput" type="search" placeholder="Type video title" />
+                </div>
+              </label>
+
+              <ul id="youtubeVideoList" class="video-list"></ul>
+            </section>
           </section>
 
           <section class="selection">
@@ -70,29 +93,6 @@
               <input id="newNotebookInput" type="text" placeholder="New notebook name" />
               <button id="createButton" class="ghost">Create</button>
             </div>
-          </section>
-
-          <section id="youtubeVideoSection" class="youtube-section hidden">
-            <div class="youtube-section-header">
-              <div>
-                <p class="list-title">YouTube videos</p>
-                <p id="youtubeChannelTitle" class="youtube-channel-title"></p>
-              </div>
-              <button id="toggleAllVideosButton" class="tiny-button" type="button">All</button>
-            </div>
-
-            <label class="field search-field">
-              <span>Search videos</span>
-              <div class="search-wrapper">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.3-4.3" />
-                </svg>
-                <input id="videoSearchInput" type="search" placeholder="Type video title" />
-              </div>
-            </label>
-
-            <ul id="youtubeVideoList" class="video-list"></ul>
           </section>
 
           <div class="import-wrapper button-row">
