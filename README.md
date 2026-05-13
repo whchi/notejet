@@ -123,4 +123,4 @@ This includes:
 
 ## Demo(youtube)
 
-[![NoteJet Demo](https://img.youtube.com/vi/j7HyZ3pRsks/0.jpg)](https://www.youtube.com/watch?v=j7HyZ3pRsks)
+[![NoteJet Demo](https://img.youtube.com/vi/j7HyZ3pRsks/0.jpg)](https://www.youtube.com/watch?v=jwmdcoKd-gk)
