@@ -1,6 +1,3 @@
-
-
-
 # NoteJet
 ![concept](/public/promote.svg)
 
@@ -8,19 +5,35 @@ NoteJet is a Chrome extension that sends the current page into NotebookLM with f
 
 ## Before you start
 
-- Install Bun 1.x.
+- **Node.js 20+** (required for `node --test`, used as primary runtime)
+- **npm** (all build scripts use `npm run`)
+- **TypeScript** (installed via npm as devDependency)
+- **Bun** is optional — used only for formatting convenience (`bunx --bun @biomejs/biome format --write`). You can also use `npx @biomejs/biome format --write` instead.
 - Make sure you can sign in to NotebookLM in Chrome.
 
 ## Install the extension
 
-1. Run `bun install`.
-2. Run `bun run build`.
+1. Run `npm install`.
+2. Run `npm run build`.
+
+Build sub-commands for reference:
+
+- `npm run clean` — remove `dist/`
+- `npm run build:ts` — TypeScript compile only
+- `npm run build:assets` — copy static assets only
+- `npm run build` — full build (clean + ts + assets)
+
 3. Open `chrome://extensions` in Chrome.
 4. Turn on **Developer mode**.
 5. Click **Load unpacked**.
 6. Select the `dist/` folder.
 
-After code changes, run `bun run build` again and click **Reload** on the extension card.
+## Development
+
+- **Test**: `npm test` builds the project then runs the Node.js test runner. Tests are `.mjs` files in `tests/` and cover shared modules (API client, auth, session state, URL policy, YouTube channel parsing).
+- **Format**: `npm run format:fix` (uses Biome). Or `bun run format:fix` if you prefer Bun.
+- **Lint**: no ESLint or TypeScript strict mode is currently configured.
+- **Reload**: After changes, run `npm run build` then click **Reload** on the extension card in `chrome://extensions`.
 
 ## What NoteJet does
 
@@ -30,6 +43,13 @@ After code changes, run `bun run build` again and click **Reload** on the extens
 - Imports the current page URL into the selected notebook.
 - Lists videos from a YouTube channel profile and imports selected videos one by one.
 - Checks whether the current page is allowed by your import whitelist.
+
+### How it works
+
+NoteJet uses a dual approach to import pages:
+
+- **API-first**: it tries NotebookLM's internal RPC API (`batchexecute` endpoint) using Google cookie auth (SID, __Secure-1PSID, __Secure-3PSID cookies)
+- **DOM fallback**: if API calls fail, it falls back to automating the NotebookLM web UI via the content script
 
 ## Basic workflow
 
@@ -50,7 +70,7 @@ YouTube channel import only appears when the current tab is a YouTube channel pr
 - `https://www.youtube.com/channel/UCX6OQ3DkcsbYNE6H8uQQuVA`
 - `https://www.youtube.com/@MrBeast`
 
-Before using it, open **Edit import whitelist** and add a YouTube Data API key. Google’s setup guide is linked from the options page:
+Before using it, open **Edit import whitelist** and add a YouTube Data API key. Google's setup guide is linked from the options page:
 <https://developers.google.com/youtube/v3/getting-started>
 
 Workflow:
