@@ -1,3 +1,6 @@
+
+https://chromewebstore.google.com/detail/notejet/ekodgbgoiecakdclfobnhnaeobnmlgbo?hl=zh_TW
+
 # NoteJet
 ![concept](/public/promote.svg)
 
